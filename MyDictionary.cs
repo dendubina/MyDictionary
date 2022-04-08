@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-
+using System.Linq;
 
 namespace Dictionary
 {
@@ -8,26 +8,15 @@ namespace Dictionary
     {
         private struct DataItem
         {                    
-            public TKey Key;
-            public TValue Value;
+            public TKey Key { get; set; }
+            public TValue Value { get; set; }
         }
-
-        private List<DataItem>[] items;
         private const int BucketsCount = 100;
-
-        public MyDictionary()
-        {
-            items = new List<DataItem>[BucketsCount];
-
-            for (int i = 0; i < items.Length; i++)
-            {
-                items[i] = new List<DataItem>();
-            }
-        }
+        private readonly ICollection<DataItem>[] _items = new ICollection<DataItem>[BucketsCount];      
 
         public TValue this[TKey key]
         {
-            get => GetValue(key);
+            get => GetDataItem(key).Value;
             
             set
             {
@@ -39,47 +28,20 @@ namespace Dictionary
         public void Add(TKey key, TValue value)
         {
             var hash = GetHash(key);
-
-            /*foreach (var item in items[hash])
-            {
-                if (key.Equals(item.Key))
-                    throw new ArgumentException($"An item with the same key has already been added. Key: {key}");
-            }*/
-
-            items[hash].Add(new DataItem
-            {                
-                Key = key,
-                Value = value,
-            });
-        }
-
-        public TValue GetValue(TKey key)
-        {
-            var hash = GetHash(key);                       
-
-            foreach(var item in items[hash])
-            {
-                if (key.Equals(item.Key))
-                    return item.Value;                
-            }
+            DataItem item = new DataItem { Key = key, Value = value };
             
-            throw new KeyNotFoundException();
-        }
+            (_items[hash] ??= new List<DataItem>()).Add(item);
+        }       
 
         private DataItem GetDataItem(TKey key)
         {
-            var hash = GetHash(key);
+            var hash = GetHash(key);            
 
-            foreach (var item in items[hash])
-            {
-                if (key.Equals(item.Key))
-                    return item;
-            }
+            DataItem? item = _items[hash].Where(x => x.Key.Equals(key)).FirstOrDefault();
 
-            throw new KeyNotFoundException();
+            return item ?? throw new KeyNotFoundException();      
         }        
 
-        private int GetHash(TKey key) => Math.Abs(key.GetHashCode() % items.Length);        
-       
+        private int GetHash(TKey key) => Math.Abs(key.GetHashCode() % _items.Length);       
     }
 }
